@@ -1,7 +1,10 @@
 const express = require("express");
 const app = express();
 let notes = require("./notes");
-const PORT = 3001;
+const cors = require("cors");
+const PORT = process.env.PORT || 3001;
+
+app.use(cors());
 
 app.get("/", (req, res) => {
     res.send("<h1>Hello World!</h1>");
@@ -32,11 +35,21 @@ app.delete('/api/notes/:id', (req, res) => {
 
 app.use(express.json());
 
+const generateId = () => {
+    const maxId = notes.length > 0 ? Math.max(...notes.map(note => Number(note.id))) : 0;
+    return String(maxId + 1);
+}
+
 app.post('/api/notes', (req, res) => {
     // console.log(req.headers); // handy to catch errors
-    const maxId = notes.length > 0 ? Math.max(...notes.map(note => Number(note.id))) : 0;
     const note = req.body;
-    note.id = String(maxId + 1);
+    if (!note.content) {
+        return res.status(400).json({
+            error: 'content missing'
+        });
+    }
+    note.id = generateId();
+    note.important = Boolean(note.important) || false;
     notes = notes.concat(note);
     res.json(note);
 })
@@ -44,3 +57,9 @@ app.post('/api/notes', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running at http://127.0.0.1:${PORT}/`);
 });
+
+const unknownEndpoint = (req, res) => {
+    res.status(404).send({ error: 'unknown endpoint' });
+};
+
+app.use(unknownEndpoint);
